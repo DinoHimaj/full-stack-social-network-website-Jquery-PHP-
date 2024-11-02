@@ -52,6 +52,42 @@
             </form>
         </div>
     </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+<script>
+    //placeholder for the dropdowns
+    $("#days").append($('<option disabled selected/>').html("Day"));
+    $("#months").append($('<option disabled selected/>').html("Month"));
+    $("#years").append($('<option disabled selected/>').html("Year"));
+
+    // Year dropdown
+    for (let i = new Date().getFullYear(); i > 1900; i--) {
+        $("#years").append($('<option/>').val(i).html(i));
+    }
+
+    // Month dropdown with shortened month names
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    months.forEach((month, index) => {
+        $("#months").append($('<option/>').val(index + 1).html(month)); 
+    });
+
+    // Dynamic day dropdown based on selected month and year
+    function updateNumberOfDays() {
+        $('#days').html(''); // Clear existing options
+        const month = $('#months').val();
+        const year = $('#years').val();
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            $('#days').append($('<option/>').val(day).html(day));
+        }
+    }
+
+    // Initialize days and attach change event listeners
+    $('#years, #months').on('change', updateNumberOfDays);
+    updateNumberOfDays(); // Initial population for days
+</script>
+
     
     
 </body>
