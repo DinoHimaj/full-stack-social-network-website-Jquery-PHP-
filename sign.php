@@ -1,6 +1,9 @@
 <?php 
 
 require 'connect/DB.php';
+require 'core/database/connection.php';
+require 'core/load.php';
+
 
 if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
     $upFirst = $_POST['first-name'];
@@ -15,12 +18,11 @@ if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
         $upGender = $_POST['gen'];
     }
 
-    if(empty($upFirst) or empty($upLast) or empty($upEmailMobile) or empty($upgen)){
-        $error = 'All fields are required';
-    }else{
-    echo 'User not found!';
+    echo $birth;
+
+  
 }
-}
+
 
 
 ?>
