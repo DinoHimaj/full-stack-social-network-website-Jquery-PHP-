@@ -1,6 +1,6 @@
 # Ignore configuration files with sensitive data
 /core/database/config.php
-/connect/
+
 
 # Ignore system files
 .DS_Store

@@ -3,8 +3,23 @@
 require 'connect/DB.php';
 
 if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
-    $firstName = $_POST['first-name'];
+    $upFirst = $_POST['first-name'];
+    $upLast = $_POST['last-name'];
+    $upEmailMobile = $_POST['email-mobile'];
+    $upPassword = $_POST['up-password'];
+    $upBirthDay = $_POST['birth-day'];
+    $upBirthMonth = $_POST['birth-month'];
+    $upBirthYear = $_POST['birth-year'];
+    $birth = $upBirthYear . '-' . $upBirthMonth . '-' . $upBirthDay;
+    if(isset($_POST['gen']) && !empty($_POST['gen'])){
+        $upGender = $_POST['gen'];
+    }
 
+    if(empty($upFirst) or empty($upLast) or empty($upEmailMobile) or empty($upgen)){
+        $error = 'All fields are required';
+    }else{
+    echo 'User not found!';
+}
 }
 
 
@@ -25,7 +40,13 @@ if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
            <img src="assets/image/sign-in-img.png" alt="">
         </div>
         <div class="right-side">
-            <div class="error"></div>
+            <div class="error">
+                <?php 
+                    if(isset($error)){
+                        echo $error;
+                    }
+                ?>
+            </div>
             <h1 style="color: #212121;">Create an account</h1>
             <div style="color: #212121; font-size: 20px">It's not free and will never be!!!</div>
             <form action="sign.php" method="post" name="user-sign-up">
