@@ -1,9 +1,7 @@
 <?php 
 
 require 'connect/DB.php';
-require 'core/database/connection.php';
 require 'core/load.php';
-
 
 if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
     $upFirst = $_POST['first-name'];
@@ -17,14 +15,26 @@ if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
     if(isset($_POST['gen']) && !empty($_POST['gen'])){
         $upGender = $_POST['gen'];
     }
-
-    echo $birth;
-
-  
+    
+    if(empty($upFirst) or empty($upLast) or empty($upEmailMobile) or empty($upPassword) or empty($upBirthDay) or empty($upBirthMonth) or empty($upBirthYear) or empty($upGender)){
+        $error = 'All fields are required';
+    }else{
+        $firstName = $loadFromUser->checkInput($upFirst);
+        $lastName = $loadFromUser->checkInput($upLast);
+        $emailMobile = $loadFromUser->checkInput($upEmailMobile);
+        $password = $loadFromUser->checkInput($upPassword);
+        $screenName = $firstName . $lastName;
+        if (DB::query(
+            'SELECT screenName FROM users WHERE screenName = :screenName',
+            array(':screenName' => $screenName)
+        )) {
+            $screenRand = rand();
+            $userLink = $screenName . $screenRand;
+        } else {
+            $userLink = $screenName;
+        }
+    }
 }
-
-
-
 ?>
 
 <!DOCTYPE html>
