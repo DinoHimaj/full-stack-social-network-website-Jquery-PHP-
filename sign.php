@@ -1,9 +1,9 @@
-<?php 
+<?php
 
 require 'connect/DB.php';
 require 'core/load.php';
 
-if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
+if (isset($_POST['first-name']) && !empty($_POST['first-name'])) {
     $upFirst = $_POST['first-name'];
     $upLast = $_POST['last-name'];
     $upEmailMobile = $_POST['email-mobile'];
@@ -11,19 +11,24 @@ if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
     $upBirthDay = $_POST['birth-day'];
     $upBirthMonth = $_POST['birth-month'];
     $upBirthYear = $_POST['birth-year'];
-    $birth = $upBirthYear . '-' . $upBirthMonth . '-' . $upBirthDay;
-    if(isset($_POST['gen']) && !empty($_POST['gen'])){
+    $birth = "$upBirthYear-$upBirthMonth-$upBirthDay";
+
+    if (isset($_POST['gen']) && !empty($_POST['gen'])) {
         $upGender = $_POST['gen'];
-    }
-    
-    if(empty($upFirst) or empty($upLast) or empty($upEmailMobile) or empty($upPassword) or empty($upBirthDay) or empty($upBirthMonth) or empty($upBirthYear) or empty($upGender)){
+        // Additional logic can be added here if needed
+    } // Added closing brace here
+
+    if (empty($upFirst) || empty($upLast) || empty($upEmailMobile) || empty($upPassword) || empty($upBirthDay) || empty($upBirthMonth) || empty($upBirthYear) || empty($upGender)) {
         $error = 'All fields are required';
-    }else{
+    } else if (strlen($upLast) < 2 || strlen($upLast) > 20) {
+        $error = 'Last Name must be between 2 and 20 characters';
+    } else {
         $firstName = $loadFromUser->checkInput($upFirst);
         $lastName = $loadFromUser->checkInput($upLast);
         $emailMobile = $loadFromUser->checkInput($upEmailMobile);
         $password = $loadFromUser->checkInput($upPassword);
         $screenName = $firstName . $lastName;
+
         if (DB::query(
             'SELECT screenName FROM users WHERE screenName = :screenName',
             array(':screenName' => $screenName)
@@ -33,9 +38,36 @@ if(isset($_POST['first-name']) && !empty($_POST['first-name'])){
         } else {
             $userLink = $screenName;
         }
+
+        // Check if email or mobile number is valid via regex
+        $emailPattern = "/^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$/";
+        $mobilePattern = "/^\d{11}$/";
+
+        if (!preg_match($emailPattern, $emailMobile)) {
+            if (!preg_match($mobilePattern, $emailMobile)) {
+                $error = 'Please enter a valid email address or an 11-digit mobile number.';
+            }
+        } elseif (!preg_match($mobilePattern, $emailMobile)) {
+            $error = 'Invalid mobile number format. It should be 11 digits.';
+        } else {
+            if (!filter_var($emailMobile, FILTER_VALIDATE_EMAIL)) {
+                $error = 'Invalid email format. Please try again.';
+            } else if (strlen($firstName) < 2 || strlen($firstName) > 20) {
+                $error = 'Name must be between 2 and 20 characters';
+            } else if (strlen($password) < 5 || strlen($password) > 60) {
+                $error = 'Password must be between 5 and 60 characters';
+            } else {
+                if (filter_var($emailMobile, FILTER_VALIDATE_EMAIL) && $loadFromUser->checkEmail($emailMobile) === true) {
+                    $error = 'Email is already in use';
+                }
+                // Additional code to handle successful registration can go here
+            }
+        }
     }
 }
+
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
