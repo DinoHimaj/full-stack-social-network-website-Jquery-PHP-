@@ -33,6 +33,16 @@ class User{
         $values = ':'.implode(', :', array_keys($fields));
         $sql = "INSERT INTO ($table) ([$columns]) VALUES ([$values])";
 
+        if($stmt = $this->pdo->prepare($sql)){
+            foreach($fields as $key => $data){
+                $stmt->bindValue(':'.$key, $data);
+            }
+            $stmt->execute();	
+            return $this->pdo->lastInsertId();
+        }
+
+
+
     }
 
 }
