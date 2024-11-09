@@ -15,6 +15,7 @@ class User{
         return $var;
     }
 
+    //check if email exists in the database
     public function checkEmail($email){
         $stmt = $this->pdo->prepare("SELECT email FROM users WHERE email = :email");    
         $stmt->bindParam(":email", $email, PDO::PARAM_STR);  
@@ -25,6 +26,13 @@ class User{
         }else{
             return false;
         }
+    }
+
+    public function create($table, $fields = array()){
+        $columns = implode(',', array_keys($fields));
+        $values = ':'.implode(', :', array_keys($fields));
+        $sql = "INSERT INTO ($table) ([$columns]) VALUES ([$values])";
+
     }
 
 }
