@@ -9,3 +9,6 @@ Thumbs.db
 # Ignore logs and temporary files
 *.log
 /tmp/
+
+#ignore test.php
+test.php

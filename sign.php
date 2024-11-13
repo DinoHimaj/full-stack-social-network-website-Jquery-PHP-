@@ -3,82 +3,119 @@
 require 'connect/DB.php';
 require 'core/load.php';
 
-if (isset($_POST['first-name']) && !empty($_POST['first-name'])) {
-    //collecting form data
-    $upFirst = $_POST['first-name'];
-    $upLast = $_POST['last-name'];
-    $upEmailMobile = $_POST['email-mobile'];
-    $upPassword = $_POST['up-password'];
-    $upBirthDay = $_POST['birth-day'];
-    $upBirthMonth = $_POST['birth-month'];
-    $upBirthYear = $_POST['birth-year'];
-    $birth = "$upBirthYear-$upBirthMonth-$upBirthDay";
+if($_SERVER['REQUEST_METHOD'] === 'POST') {
+    //Collect all form data
+    $inputFirstName = $_POST['first-name'] ?? '';
+    $inputLastName = $_POST['last-name'] ?? '';
+    $inputEmailMobile = $_POST['email-mobile'] ?? '';
+    $inputPassword = $_POST['up-password'] ?? '';
+    $inputBirthDay = $_POST['birth-day'] ?? '';
+    $inputBirthMonth = $_POST['birth-month'] ?? '';
+    $inputBirthYear = $_POST['birth-year'] ?? '';
+    $inputGender = $_POST['gen'] ?? '';
+    $inputBirth = $inputBirthYear.'-'.$inputBirthMonth.'-'.$inputBirthDay;
 
-    if (isset($_POST['gen']) && !empty($_POST['gen'])) {
-        $upGender = $_POST['gen'];
-    } 
+    //Check if all required fields are filled
+    $errors = [];
+    $required_fields = ['first-name', 'last-name', 'email-mobile', 'up-password', 
+                       'birth-day', 'birth-month', 'birth-year', 'gen'];
+    
+    foreach($required_fields as $field) {
+        if(!isset($_POST[$field]) || empty($_POST[$field])) {
+            $errors[] = "All fields are required";
+            break;
+        }
+    }
 
-    //Validating form data
-    if (empty($upFirst) || empty($upLast) || empty($upEmailMobile) || empty($upPassword) || empty($upBirthDay) || empty($upBirthMonth) || empty($upBirthYear) || empty($upGender)) {
-        $error = 'All fields are required';
-    } else if (strlen($upLast) < 2 || strlen($upLast) > 20) {
-        $error = 'Last Name must be between 2 and 20 characters';
-    } else {
-        $firstName = $loadFromUser->checkInput($upFirst);
-        $lastName = $loadFromUser->checkInput($upLast);
-        $emailMobile = $loadFromUser->checkInput($upEmailMobile);
-        $password = $loadFromUser->checkInput($upPassword);
-        $screenName = $firstName . $lastName;
+    //Basic security check using checkInput
+    if(empty($errors)) {
+        $firstName = $loadFromUtils->checkInput($inputFirstName);
+        $lastName = $loadFromUtils->checkInput($inputLastName);
+        $emailMobile = $loadFromUtils->checkInput($inputEmailMobile);
+        $password = $loadFromUtils->checkInput($inputPassword);
+        
+        // 4. Advanced validation using Utils class
+        if(!$loadFromUtils->validateName($firstName)) {
+            $errors[] = "First name must be between 2 and 25 characters";
+        }
+        
+        if(!$loadFromUtils->validateName($lastName)) {
+            $errors[] = "Last name must be between 2 and 25 characters";
+        }
+        
+        // First, determine if input is valid email or valid mobile
+        $isValidEmail = $loadFromUtils->validateEmail($emailMobile);
+        $isValidMobile = $loadFromUtils->validateMobile($emailMobile);
 
-        // Ensuring unique screen name
-        if (DB::query(
-            'SELECT screenName FROM users WHERE screenName = :screenName',
-            array(':screenName' => $screenName)
-        )) {
+        // Show error only if NEITHER validation passes
+        if(!$isValidEmail && !$isValidMobile) {
+            $errors[] = "Please enter a valid email address or mobile number";
+        }
+        
+        if(!$loadFromUtils->validatePassword($password)) {
+            $errors[] = "Password must be between 8 and 32 characters";
+        }
+    }
+
+    // Add after collecting form data
+    if(!checkdate($birthMonth, $birthDay, $birthYear)) {
+        $errors[] = "Invalid birth date";
+    }
+
+    
+    if(empty($errors)) {
+        // Generate screen name
+        $screenName = $firstName.'_'.$lastName;
+        
+        // Check if screen name exists and modify if needed
+        if(DB::query('SELECT screenName FROM users WHERE screenName = :screenName', 
+            array(':screenName' => $screenName))) {
             $screenRand = rand();
-            $userLink = $screenName . $screenRand;
+            $userLink = $screenName.$screenRand;
         } else {
             $userLink = $screenName;
         }
 
-        // Email and mobile number validation via regex
-        $emailPattern = "/^[\w\-\.]+@([\w\-]+\.)+[\w\-]{2,4}$/";
-        $mobilePattern = "/^\d{1,19}$/";
-
-        if (!preg_match($emailPattern, $emailMobile)) {
-            if (!preg_match($mobilePattern, $emailMobile)) {
-                $error = 'Please enter a valid email address or a mobile number with less than 20 digits.';
-            }
-        } elseif (!preg_match($mobilePattern, $emailMobile)) {
-            $error = 'Invalid mobile number format. It should have less than 20 digits.';
-        } else {
-            if (!filter_var($emailMobile, FILTER_VALIDATE_EMAIL)) {
-                $error = 'Invalid email format. Please try again.';
-            } else if (strlen($firstName) < 2 || strlen($firstName) > 20) {
-                $error = 'Name must be between 2 and 20 characters';
-            } else if (strlen($password) < 5 || strlen($password) > 60) {
-                $error = 'Password must be between 5 and 60 characters';
-            } else {
-                if (filter_var($emailMobile, FILTER_VALIDATE_EMAIL) && $loadFromUser->checkEmail($emailMobile) === true) {
-                    $error = 'Email is already in use';
-                } else {
-                    // Inserting a new user into the database
-                    $loadFromUser->create('users', array(
-                        'firstName' => $firstName,
-                        'lastName' => $lastName,
-                        'email' => $emailMobile,
-                        'password' => password_hash($password, PASSWORD_BCRYPT),
-                        'screenName' => $screenName,
-                        'userLink' => $userLink,
-                        'birthday' => $birth,
-                        'gender' => $upGender
-                    ));
+        // Create new user
+        try {
+            // Check if email/mobile already exists FIRST
+            if($isValidEmail) {
+                if(DB::query('SELECT email FROM users WHERE email = :email', array(':email' => $emailMobile))) {
+                    $errors[] = "Email already registered";
+                }
+            } else if($isValidMobile) {
+                if(DB::query('SELECT mobile FROM users WHERE mobile = :mobile', array(':mobile' => $emailMobile))) {
+                    $errors[] = "Mobile number already registered";
                 }
             }
-        }
+
+            if(empty($errors)) {
+                $user_data = [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'screenName' => $screenName,
+                    'userLink' => $userLink,
+                    'email' => $isValidEmail ? $emailMobile : null,    // Store as email if valid email
+                    'mobile' => $isValidMobile ? $emailMobile : null,  // Store as mobile if valid mobile
+                    'password' => password_hash($password, PASSWORD_BCRYPT),
+                    'birthday' => $birth,
+                    'gender' => $upgen
+                ];
+                
+                $user_id = $loadFromUser->create('users', $user_data);
+                // if($user_id) {
+                //     header('Location: login.php?registered=success');
+                //     exit();
+                // } else {
+                //     $errors[] = "Registration failed";
+                // }
+            }
+        } catch(Exception $e) {
+            error_log("Registration error: " . $e->getMessage());
+            $errors[] = "An error occurred during registration";
         }
     }
-
+}
 
 ?>
 
@@ -100,14 +137,14 @@ if (isset($_POST['first-name']) && !empty($_POST['first-name'])) {
         <div class="right-side">
             <div class="error">
                 <?php 
-                    if(isset($error)){
-                        echo $error;
+                    if(isset($errors)){
+                        echo implode('<br>', $errors);
                     }
                 ?>
             </div>
             <h1 style="color: #212121;">Create an account</h1>
             <div style="color: #212121; font-size: 20px">It's not free and will never be!!!</div>
-            <form action="sign.php" method="post" name="user-sign-up">
+            <form action="sign.php" method="POST" name="user-sign-up">
                 <div class="sign-up-form">
                     <div class="sign-up-name">
                         <input type="text" name="first-name" id="first-name" class="text-field" placeholder="First Name">
@@ -117,7 +154,7 @@ if (isset($_POST['first-name']) && !empty($_POST['first-name'])) {
                         <input type="text" name="email-mobile" id="up-email" placeholder="Mobile number or email address" class="text-input">
                     </div>
                     <div class="sign-up-password">
-                        <input type="password" name="up-password" id="up-password" class="text-input">
+                        <input type="password" name="up-password" id="up-password" class="text-input" placeholder="Password">
                     </div>
                     <div class="sign-up-birthday">
                         <div class="bday">Birthday</div>
