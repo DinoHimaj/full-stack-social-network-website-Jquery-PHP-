@@ -12,3 +12,5 @@ Thumbs.db
 
 #ignore test.php
 test.php
+
+/vendor/

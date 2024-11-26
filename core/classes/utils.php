@@ -1,14 +1,14 @@
 <?php
 class Utils {
 
-    public function checkInput($input) {
+    public function checkInput(string $input): string {
         $input = htmlspecialchars($input);
         $input = trim($input);
         $input = stripslashes($input);
         return $input;
     }
 
-    public function validateName($name) {
+    public function validateName(string $name): bool {
         $name = $this->checkInput($name);
         if(strlen($name) < 2 || strlen($name) > 25) {
             return false;

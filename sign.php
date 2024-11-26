@@ -1,7 +1,18 @@
 <?php
 
 require 'connect/DB.php';
-require 'core/load.php';
+require_once 'core/load.php';
+
+$firstName = '';
+$lastName = '';
+$emailMobile = '';
+$password = '';
+$birth = '';
+$upgen = '';
+$isValidEmail = false;
+$isValidMobile = false;
+$errors = [];
+
 
 if($_SERVER['REQUEST_METHOD'] === 'POST') {
     //Collect all form data
@@ -13,7 +24,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
     $inputBirthMonth = $_POST['birth-month'] ?? '';
     $inputBirthYear = $_POST['birth-year'] ?? '';
     $inputGender = $_POST['gen'] ?? '';
-    $inputBirth = $inputBirthYear.'-'.$inputBirthMonth.'-'.$inputBirthDay;
+
+    $birth = implode('-', array_map(function($val) {
+        return filter_var($val, FILTER_SANITIZE_NUMBER_INT);
+    }, [$inputBirthYear, $inputBirthMonth, $inputBirthDay]));
 
     //Check if all required fields are filled
     $errors = [];
@@ -27,14 +41,16 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    
     //Basic security check using checkInput
     if(empty($errors)) {
         $firstName = $loadFromUtils->checkInput($inputFirstName);
         $lastName = $loadFromUtils->checkInput($inputLastName);
         $emailMobile = $loadFromUtils->checkInput($inputEmailMobile);
         $password = $loadFromUtils->checkInput($inputPassword);
+        $upgen = $loadFromUtils->checkInput($inputGender);
         
-        // 4. Advanced validation using Utils class
+        // Advanced validation using Utils class
         if(!$loadFromUtils->validateName($firstName)) {
             $errors[] = "First name must be between 2 and 25 characters";
         }
@@ -43,11 +59,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = "Last name must be between 2 and 25 characters";
         }
         
-        // First, determine if input is valid email or valid mobile
         $isValidEmail = $loadFromUtils->validateEmail($emailMobile);
         $isValidMobile = $loadFromUtils->validateMobile($emailMobile);
-
-        // Show error only if NEITHER validation passes
         if(!$isValidEmail && !$isValidMobile) {
             $errors[] = "Please enter a valid email address or mobile number";
         }
@@ -57,12 +70,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Add after collecting form data
-    if(!checkdate($birthMonth, $birthDay, $birthYear)) {
-        $errors[] = "Invalid birth date";
-    }
 
-    
     if(empty($errors)) {
         // Generate screen name
         $screenName = $firstName.'_'.$lastName;
@@ -95,8 +103,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'last_name' => $lastName,
                     'screenName' => $screenName,
                     'userLink' => $userLink,
-                    'email' => $isValidEmail ? $emailMobile : null,    // Store as email if valid email
-                    'mobile' => $isValidMobile ? $emailMobile : null,  // Store as mobile if valid mobile
+                    'email' => $isValidEmail ? $emailMobile : null,    
+                    'mobile' => $isValidMobile ? $emailMobile : null,  
                     'password' => password_hash($password, PASSWORD_BCRYPT),
                     'birthday' => $birth,
                     'gender' => $upgen
@@ -109,11 +117,16 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // } else {
                 //     $errors[] = "Registration failed";
                 // }
+
+                //Generate token for account verification
+                $tstrong = true;
+                $token = bin2hex(openssl_random_pseudo_bytes(64, $tstrong));
             }
         } catch(Exception $e) {
             error_log("Registration error: " . $e->getMessage());
             $errors[] = "An error occurred during registration";
         }
+        
     }
 }
 
@@ -137,7 +150,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="right-side">
             <div class="error">
                 <?php 
-                    if(isset($errors)){
+                    if(!empty($errors)){
                         echo implode('<br>', $errors);
                     }
                 ?>

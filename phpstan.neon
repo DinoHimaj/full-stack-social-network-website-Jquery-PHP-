@@ -1,0 +1,22 @@
+parameters:
+    level: 9
+    scanDirectories:
+        - core
+    paths:
+        - sign.php
+        - connect/DB.php
+        - core/database/connection.php
+        - core/load.php
+        - core/classes/post.php
+        - core/classes/users.php
+        - core/classes/utils.php
+
+    bootstrapFiles:
+        - connect/DB.php
+        - core/database/connection.php
+        - core/load.php
+        - core/classes/post.php
+        - core/classes/users.php
+        - core/classes/utils.php
+
+    
